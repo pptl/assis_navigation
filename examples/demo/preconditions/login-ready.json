@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schemas/recipe.schema.json",
+  "name": "login-ready",
+  "description": "煙霧 recipe：以 employee 登入、清除 storageReset 指定的本機狀態、停在 /Index/Home。用來驗證 config 的登入 selector、auth、storageReset 與落地頁都正確；所有其他 recipe 都建立在同一組設定上。",
+  "createdAt": "2026-09-07T09:56:15.283Z",
+  "targetUrl": "/Index/Home",
+  "steps": [
+    {
+      "id": "open-landing",
+      "actor": "employee",
+      "kind": "ui",
+      "action": {
+        "type": "navigate",
+        "url": "/Index/Home"
+      },
+      "note": "登入由 ensureContext 依 config.login 觸發，不寫成步驟。"
+    },
+    {
+      "id": "wait-landing",
+      "actor": "employee",
+      "kind": "ui",
+      "action": {
+        "type": "waitFor",
+        "selector": "[aria-label=\"open drawer\"]",
+        "timeoutMs": 20000
+      },
+      "note": "落地頁的關鍵元素出現代表登入與導航都成功。"
+    }
+  ],
+  "finalNavigation": "/Index/Home",
+  "finalContext": "employee",
+  "targetHint": {
+    "url": "/Index/Home",
+    "note": "煙霧 recipe 沒有下一跳；它只驗證登入、storageReset 與落地頁。"
+  },
+  "verify": {
+    "selectors": [
+      "[aria-label=\"open drawer\"]"
+    ],
+    "textIncludes": []
+  },
+  "draft": false
+}

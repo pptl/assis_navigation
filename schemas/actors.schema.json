@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nav-recorder.local/schemas/actors.schema.json",
+  "title": "nav-recorder actors (.nav-recorder/actors.json)",
+  "type": "object",
+  "required": ["actors"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "actors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string", "description": "Plain text; hashed by Companion when login.bodyTemplate asks for it." },
+          "contextName": { "type": "string", "description": "Browser context (tab) name; defaults to the actor name." },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

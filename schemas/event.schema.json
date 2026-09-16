@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nav-recorder.local/schemas/event.schema.json",
+  "title": "nav-recorder recorded event (one NDJSON line in .nav-recorder/raw/YYYY-MM-DD.ndjson)",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["v", "type", "requestId", "via", "tabId", "tabUrl", "origin", "ts", "method", "url", "status"],
+      "properties": {
+        "v": { "const": 1 },
+        "type": { "const": "request" },
+        "requestId": { "type": "string" },
+        "via": { "enum": ["fetch", "xhr"] },
+        "tabId": { "type": "integer" },
+        "tabUrl": { "type": "string" },
+        "origin": { "type": "string" },
+        "ts": { "type": "string", "description": "request start, ISO 8601" },
+        "durationMs": { "type": "number" },
+        "method": { "type": "string" },
+        "url": { "type": "string", "description": "absolute" },
+        "requestHeaders": { "type": "object", "additionalProperties": { "type": "string" }, "description": "only authorization, cookie, content-type, accept, x-*" },
+        "requestBody": { "type": ["string", "null"] },
+        "status": { "type": "integer", "description": "0 = network error (see error)" },
+        "responseHeaders": { "type": "object", "additionalProperties": { "type": "string" } },
+        "responseBody": { "type": ["string", "null"] },
+        "responseTruncated": { "type": "boolean" },
+        "responseBodyRef": { "type": "string", "description": "On disk only: sha1 of a body of 512+ chars stored once in the sibling .bodies.ndjson file; responseBody is null on that line and restored when read." },
+        "error": { "type": "string" },
+        "bodyError": { "type": "string", "description": "response body could not be read (e.g. clone failed); status/headers are still valid" },
+        "authSources": { "type": "array", "items": { "type": "string" }, "description": "requestIds whose token/cookie this request carried (Layer 2b). Added by the host." },
+        "seq": { "type": "integer", "description": "monotonic per project, added by the host" },
+        "receivedAt": { "type": "string" }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["v", "type", "tabId", "tabUrl", "origin", "ts", "url", "transition"],
+      "properties": {
+        "v": { "const": 1 },
+        "type": { "const": "navigation" },
+        "tabId": { "type": "integer" },
+        "tabUrl": { "type": "string" },
+        "origin": { "type": "string" },
+        "ts": { "type": "string" },
+        "url": { "type": "string" },
+        "transition": { "enum": ["committed", "history"], "description": "committed = full navigation; history = SPA pushState/replaceState" },
+        "transitionType": { "type": "string", "description": "chrome.webNavigation transitionType (link, typed, reload, auto_bookmark, ...). Absent on recordings made before interactions were recorded." },
+        "transitionQualifiers": { "type": "array", "items": { "type": "string" } },
+        "seq": { "type": "integer" },
+        "receivedAt": { "type": "string" }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["v", "type", "kind", "tabId", "tabUrl", "origin", "ts", "pageUrl", "target", "selectors"],
+      "description": "A user interaction recorded by extension/interactions.js (capture phase, trusted events only). Navigation is attached at read time by the companion, not here.",
+      "properties": {
+        "v": { "const": 1 },
+        "type": { "const": "interaction" },
+        "kind": { "enum": ["click", "input", "key"] },
+        "tabId": { "type": "integer" },
+        "tabUrl": { "type": "string" },
+        "origin": { "type": "string" },
+        "ts": { "type": "string" },
+        "pageUrl": { "type": "string", "description": "location.href when the interaction happened" },
+        "target": {
+          "type": "object",
+          "required": ["tag"],
+          "properties": {
+            "tag": { "type": "string" },
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string" },
+            "role": { "type": "string", "description": "explicit role attribute or the tag's implicit role" },
+            "accessibleName": { "type": "string" },
+            "nameUnique": { "type": "boolean", "description": "accessibleName + role single out this element (false when aria-label is reused as a class-like tag)" },
+            "label": { "type": "string", "description": "best human label: accessibleName when unique, else visible text" },
+            "text": { "type": "string", "description": "innerText, at most 120 chars" },
+            "href": { "type": "string", "description": "absolute href of the element or its closest <a href>" },
+            "testId": { "type": "object", "properties": { "attr": { "type": "string" }, "value": { "type": "string" } } },
+            "interactive": { "type": "object", "description": "closest ancestor with a widget role when the clicked node has none", "properties": { "tag": { "type": "string" }, "role": { "type": "string" }, "name": { "type": "string" }, "nameUnique": { "type": "boolean" } } },
+            "ancestors": { "type": "array", "items": { "type": "object", "properties": { "tag": { "type": "string" }, "role": { "type": "string" }, "name": { "type": "string" } } }, "description": "up to 3 ancestors carrying a role or aria-label, nearest first" }
+          }
+        },
+        "selectors": { "type": "array", "items": { "type": "string" }, "description": "alternative selectors, most stable first: aria/Name[role=...], [data-testid=...], #id, css path, text/..." },
+        "key": { "type": "string" },
+        "value": { "type": "string", "description": "change events only; passwords are always \"***\"" },
+        "button": { "type": "integer" },
+        "seq": { "type": "integer" },
+        "receivedAt": { "type": "string" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nav-recorder.local/schemas/recipe.schema.json",
+  "title": "nav-recorder precondition recipe (.nav-recorder/preconditions/<name>.json)",
+  "type": "object",
+  "required": ["name", "createdAt", "steps", "finalNavigation"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+    "description": { "type": "string" },
+    "createdAt": { "type": "string" },
+    "targetUrl": { "type": "string", "description": "The screen this recipe prepares for. Never navigated by the recipe itself." },
+    "shape": {
+      "enum": ["navigation", "navigation-existing-data", "data"],
+      "description": "Decided mechanically at distillation and re-normalised on save. navigation = a route through the app, nothing created. navigation-existing-data = same, but the target screen shows a record the recipe does not create (see existingDataRefs). data = has API steps that build state."
+    },
+    "existingDataRefs": {
+      "type": "array",
+      "description": "shape \"navigation-existing-data\" only: records that must already be in the test database.",
+      "items": {
+        "type": "object",
+        "required": ["value", "usedBy", "seenIn"],
+        "properties": {
+          "value": { "type": "string" },
+          "usedBy": { "type": "string", "description": "the target screen's request that used it" },
+          "seenIn": { "type": "string", "description": "the earlier response it came from" }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "description": "The recorded login request — metadata only, never replayed. Credentials come from actors.json.",
+      "properties": { "role": { "const": "auth" }, "call": { "$ref": "#/$defs/apiCall" }, "bodyShape": { "type": "array", "items": { "type": "string" } } }
+    },
+    "steps": { "type": "array", "items": { "oneOf": [{ "$ref": "#/$defs/apiStep" }, { "$ref": "#/$defs/uiStep" }] } },
+    "finalNavigation": { "type": "string", "description": "上一站: a stable page the current change will not touch. Absolute or relative to appOrigins[0]." },
+    "finalContext": { "type": "string", "description": "Context (tab) to hand over to Agent dev." },
+    "targetHint": {
+      "type": "object",
+      "required": ["url"],
+      "properties": {
+        "url": { "type": "string" },
+        "note": { "type": "string", "description": "How to make the last hop from finalNavigation into the target. Pre-filled by capture-recent from recorded clicks when available." },
+        "clicks": {
+          "type": "array",
+          "description": "Recorded clicks of the last hop, in order. Replay by hand: find the element by its aria name first, then by the alternative selectors.",
+          "items": {
+            "type": "object",
+            "required": ["selectors"],
+            "properties": {
+              "text": { "type": "string" },
+              "role": { "type": "string" },
+              "href": { "type": "string" },
+              "selectors": { "type": "array", "items": { "type": "string" } },
+              "weak": { "type": "boolean", "description": "target had no navigation semantics (plain div/span) — verify before relying on it" }
+            }
+          }
+        }
+      }
+    },
+    "verify": { "type": "object", "properties": { "selectors": { "type": "array", "items": { "type": "string" } }, "textIncludes": { "type": "array", "items": { "type": "string" } } } },
+    "source": { "type": "object" },
+    "draft": { "type": "boolean" },
+    "pendingDecisions": { "type": "array", "items": { "type": "object", "required": ["kind", "message"] } }
+  },
+  "$defs": {
+    "apiCall": { "type": "object", "required": ["method", "url"], "properties": { "method": { "type": "string" }, "url": { "type": "string", "description": "Relative to apiBases[0]; may contain {placeholders} filled from urlParams / params / captured." } } },
+    "paramSpec": {
+      "oneOf": [
+        { "type": "object", "required": ["type", "fn"], "properties": { "type": { "const": "faker" }, "fn": { "type": "string", "description": "faker path, optionally locale-prefixed: \"person.fullName\", \"zh_TW:person.fullName\", \"helpers.arrayElement\"" }, "args": { "type": "array" } } },
+        { "type": "object", "required": ["type", "value"], "properties": { "type": { "const": "fixed" }, "value": {} } },
+        { "type": "object", "required": ["type", "ref"], "properties": { "type": { "const": "captured" }, "ref": { "type": "string" } } }
+      ]
+    },
+    "constraintEvidence": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": { "enum": ["code", "runtime-probe", "none"] },
+        "location": { "type": "string" },
+        "observedError": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "apiStep": {
+      "type": "object",
+      "required": ["id", "actor", "kind", "call"],
+      "properties": {
+        "id": { "type": "string" },
+        "actor": { "type": "string" },
+        "kind": { "const": "api" },
+        "call": { "$ref": "#/$defs/apiCall" },
+        "bodyTemplate": { "description": "Recorded body; params override positions inside it." },
+        "params": { "type": "object", "additionalProperties": { "$ref": "#/$defs/paramSpec" }, "description": "key = JSON pointer into bodyTemplate (\"/a/b\") or a bare top-level property." },
+        "urlParams": { "type": "object", "additionalProperties": { "$ref": "#/$defs/paramSpec" }, "description": "Fill {placeholders} in call.url only." },
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+        "capture": { "type": "object", "additionalProperties": { "type": "string" }, "description": "name → JSON path rooted at {response, status}: \"$.response.data.id\"" },
+        "expect": { "type": "object", "properties": { "status": { "type": "array", "items": { "type": "integer" } }, "jsonPath": { "type": "string" }, "equals": {} } },
+        "constraintEvidence": { "type": "object", "additionalProperties": { "$ref": "#/$defs/constraintEvidence" } },
+        "disabled": { "type": "boolean" },
+        "note": { "type": "string" }
+      }
+    },
+    "uiStep": {
+      "type": "object",
+      "required": ["id", "actor", "kind", "action"],
+      "properties": {
+        "id": { "type": "string" },
+        "actor": { "type": "string" },
+        "kind": { "const": "ui" },
+        "action": {
+          "oneOf": [
+            { "type": "object", "required": ["type", "url"], "properties": { "type": { "const": "navigate" }, "url": { "type": "string" } } },
+            { "type": "object", "required": ["type", "selector"], "properties": { "type": { "const": "click" }, "gotoUrl": { "type": "string" }, "selector": { "type": "string" } } },
+            { "type": "object", "required": ["type", "fields"], "properties": { "type": { "const": "fill" }, "gotoUrl": { "type": "string" }, "fields": { "type": "object", "additionalProperties": { "type": "string" } } } },
+            { "type": "object", "required": ["type"], "properties": { "type": { "const": "waitFor" }, "selector": { "type": "string" }, "text": { "type": "string" }, "urlIncludes": { "type": "string" }, "timeoutMs": { "type": "integer" } } }
+          ]
+        },
+        "disabled": { "type": "boolean" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

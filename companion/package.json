@@ -1,0 +1,26 @@
+{
+  "name": "nav-recorder",
+  "version": "0.1.0",
+  "description": "Companion for the navigation recorder: native messaging host + CLI that turns recorded browser traffic into precondition recipes.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "nav-recorder": "dist/src/main.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node scripts/clean.mjs",
+    "test": "npm run build && node scripts/run-tests.mjs",
+    "test:only": "node scripts/run-tests.mjs"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "~5.9.0"
+  }
+}

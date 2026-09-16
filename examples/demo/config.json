@@ -1,0 +1,88 @@
+{
+  "$schema": "../../schemas/config.schema.json",
+  "name": "demo",
+  "appOrigins": [
+    "http://localhost:3000"
+  ],
+  "apiBases": [
+    {
+      "derive": "json",
+      "file": "package.json",
+      "path": "testConfig.devDomain",
+      "append": "/api/",
+      "pathFrom": {
+        "file": "src/js/Domain.ts",
+        "regex": "packageJson\\.testConfig\\.(\\w+)",
+        "template": "testConfig.$1"
+      }
+    }
+  ],
+  "readOnlyPatterns": [
+    "(Search|Detail|List|Report|Check|Statistic|All|Own|Total|Dashboard|Exist|Summary|Setting)$"
+  ],
+  "auth": {
+    "kind": "bearer",
+    "header": "Authorization",
+    "tokenSource": {
+      "area": "localStorage",
+      "key": "token"
+    }
+  },
+  "login": {
+    "kind": "ui",
+    "url": "/Login",
+    "fields": {
+      "username": "input[name='login--userName']",
+      "password": "input[name='login--password']"
+    },
+    "submit": "button:has-text('登入')",
+    "successCheck": {
+      "urlNot": "/Login"
+    },
+    "call": {
+      "method": "POST",
+      "url": "auth/signin"
+    }
+  },
+  "storageReset": {
+    "indexedDB": [
+      {
+        "db": "DEMO",
+        "stores": [
+          "QueryCondition"
+        ]
+      }
+    ],
+    "localStorage": [],
+    "sessionStorage": []
+  },
+  "schemaSources": [
+    {
+      "kind": "openapi",
+      "glob": "swagger/*.json"
+    }
+  ],
+  "dataSourceRules": [
+    {
+      "pattern": "Search\\(pageSearch\\)",
+      "verdict": "api",
+      "note": "List 頁（{Entity}First.tsx）掛載時的 useEffect 會呼叫 apiManager.{Entity}Search(pageSearch) 自行抓資料，可 deep link。例：src/pages/UserLevel/UserLevelFirst.tsx。"
+    },
+    {
+      "pattern": "sessionStorage\\.getItem\\(['\\\"]params['\\\"]\\)",
+      "verdict": "ui",
+      "note": "Second/明細頁（{Entity}Second.tsx）靠 sessionStorage.getItem('params') 取得上一頁點擊列表時寫入的 id，無法 deep link，必須先經過 First 頁點擊。寫入處例：UserLevelFirst.tsx 的 sessionStorage.params = JSON.stringify({ id })；讀取處例：UserLevelSecond.tsx。"
+    }
+  ],
+  "navigation": {
+    "entry": "menu",
+    "evidence": "實測：全新登入 session 直接 navigate 到 /Booking/BookingFirst，主畫面完全空白、側欄停在上次的上方分頁；側欄選單內容跟著上方分頁的 client-side 狀態走，冷啟動用網址進入不可靠。"
+  },
+  "recording": {
+    "maxBodyKB": 64,
+    "bufferHours": 2
+  },
+  "execute": {
+    "maxConsecutiveFailures": 3
+  }
+}

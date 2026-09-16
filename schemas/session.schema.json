@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nav-recorder.local/schemas/session.schema.json",
+  "title": "nav-recorder execution session (.nav-recorder/sessions/<id>.json) — transient",
+  "type": "object",
+  "required": ["sessionId", "recipeName", "recipe", "mode", "status", "cursor", "captured", "failures", "contexts"],
+  "properties": {
+    "sessionId": { "type": "string" },
+    "recipeName": { "type": "string" },
+    "recipe": { "$ref": "recipe.schema.json" },
+    "mode": { "enum": ["normal", "probe"] },
+    "status": { "enum": ["running", "done", "halted"] },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" },
+    "cursor": { "type": "object", "properties": { "stepIndex": { "type": "integer", "description": "-1 = no more steps" }, "probeRound": { "enum": [1, 2] } } },
+    "pending": {
+      "type": "object",
+      "description": "The step currently issued by execute-next and awaiting execute-report.",
+      "properties": {
+        "stepIndex": { "type": "integer" },
+        "stepId": { "type": "string" },
+        "probeRound": { "enum": [1, 2] },
+        "contextName": { "type": "string" },
+        "actor": { "type": "string" },
+        "ensureContext": { "type": "boolean" },
+        "resolved": { "type": "object", "properties": { "body": {}, "values": { "type": "object" }, "url": { "type": "string" } } },
+        "issuedAt": { "type": "string" },
+        "attempt": { "type": "integer" }
+      }
+    },
+    "captured": { "type": "object" },
+    "failures": { "type": "object", "additionalProperties": { "type": "integer" }, "description": "\"METHOD url\" → consecutive failures" },
+    "contexts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "actor": { "type": "string" },
+          "loggedIn": { "type": "boolean" },
+          "storageSnapshot": { "type": "object", "properties": { "localStorage": { "type": "object" }, "sessionStorage": { "type": "object" } } }
+        }
+      }
+    },
+    "lastContext": { "type": "string" },
+    "probeResults": { "type": "array" },
+    "probeResolved": { "type": "object" },
+    "log": { "type": "array" },
+    "haltReason": { "type": "string" }
+  }
+}

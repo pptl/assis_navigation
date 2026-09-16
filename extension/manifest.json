@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "nav-recorder",
+  "version": "0.1.0",
+  "description": "Background recorder for the navigation companion: captures API traffic and route changes on whitelisted dev origins and streams them to the local nav-recorder host.",
+  "permissions": [
+    "nativeMessaging",
+    "webNavigation",
+    "tabs",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "nav-recorder"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyg8VvwM6lOpHVHN7wp1pMbZM/1rYLM0EENul0lCPKKQBmNnhvWqzsEezqz8dK74QCQMCn7eNl7AOx9qMIooBL7P6Ok5+o/brExJ4t05fYxYv6fDbBE0z2QZrDnMs4kwBONCAn47b7EcBMio+DmG3CgWHeLIXWoBzEwIgwzts+rAngc2vFzHzFtWlEBFDHkNQjZ8avAqXDubTD1B/J7dAx4TlgbRj1oUa/eaC10HXEEM8pM2Rs53WXCOAzrothT23xZa6Lxu3g//YCGdvPZuBUk5GSs3ieiRpfbJ/ZneAmCsg4RJxIQmtZx2adppKq5jcWrfsWyUjrr6mV7XIl3TOOwIDAQAB"
+}

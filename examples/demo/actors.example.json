@@ -1,0 +1,10 @@
+{
+  "$schema": "../../schemas/actors.schema.json",
+  "actors": {
+    "employee": {
+      "username": "demo-user",
+      "password": "CHANGE_ME",
+      "contextName": "employee"
+    }
+  }
+}

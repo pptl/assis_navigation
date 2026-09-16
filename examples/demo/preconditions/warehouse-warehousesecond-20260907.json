@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../schemas/recipe.schema.json",
+  "name": "warehouse-warehousesecond-20260907",
+  "description": "查看倉儲明細",
+  "createdAt": "2026-09-07T09:50:43.613Z",
+  "targetUrl": "/Warehouse/WarehouseSecond",
+  "steps": [],
+  "finalNavigation": "/Warehouse/WarehouseFirst",
+  "finalContext": "employee",
+  "targetHint": {
+    "url": "/Warehouse/WarehouseSecond",
+    "note": "在 WarehouseFirst 的倉儲列表任一列（tr）點擊即可，trClick 綁定 handleTableListClick，會 history.push 並把 sessionStorage.params 寫成 { id }（src/pages/Warehouse/WarehouseFirst/index.tsx）。列表至少要有一筆資料才點得到。"
+  },
+  "verify": {
+    "selectors": [],
+    "textIncludes": [
+      "總儲位數"
+    ]
+  },
+  "draft": false
+}

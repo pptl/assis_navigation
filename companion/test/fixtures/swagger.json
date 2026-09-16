@@ -1,0 +1,32 @@
+{
+  "openapi": "3.0.1",
+  "info": { "title": "Apps", "version": "v1" },
+  "servers": [{ "url": "/app" }],
+  "paths": {
+    "/Apps/AppCreate": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/AppCreate" } }
+          }
+        },
+        "responses": { "200": { "description": "ok" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AppCreate": {
+        "required": ["title", "dept"],
+        "type": "object",
+        "properties": {
+          "title": { "minLength": 1, "type": "string" },
+          "dept": { "type": "string", "enum": ["RD", "QA"] },
+          "amount": { "type": "integer", "format": "int32" },
+          "plateNo": { "type": "string", "x-unique": true }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

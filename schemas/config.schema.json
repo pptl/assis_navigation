@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nav-recorder.local/schemas/config.schema.json",
+  "title": "nav-recorder project config (.nav-recorder/config.json)",
+  "type": "object",
+  "required": ["name", "appOrigins", "apiBases", "auth", "login"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": { "type": "string", "minLength": 1 },
+    "appOrigins": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^https?://[^/]+$" } },
+    "apiBases": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^https?://.+/$" } },
+    "readOnlyPatterns": { "type": "array", "items": { "type": "string" }, "description": "Suffix-anchored regexes (case-insensitive) marking POST-style reads." },
+    "auth": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["bearer", "cookie", "none"] },
+        "header": { "type": "string", "default": "Authorization" },
+        "tokenSource": {
+          "type": "object",
+          "required": ["area", "key"],
+          "properties": { "area": { "enum": ["localStorage", "sessionStorage"] }, "key": { "type": "string" } }
+        }
+      }
+    },
+    "login": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "url", "fields", "submit"],
+          "properties": {
+            "kind": { "const": "ui" },
+            "url": { "type": "string" },
+            "fields": { "type": "object", "required": ["username", "password"], "properties": { "username": { "type": "string" }, "password": { "type": "string" } } },
+            "submit": { "type": "string" },
+            "successCheck": { "type": "object", "properties": { "urlNot": { "type": "string" }, "urlIncludes": { "type": "string" }, "selector": { "type": "string" } } },
+            "call": { "$ref": "#/$defs/apiCall" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "call", "bodyTemplate"],
+          "properties": {
+            "kind": { "const": "api" },
+            "call": { "$ref": "#/$defs/apiCall" },
+            "bodyTemplate": { "type": "object", "description": "String values may use {{username}}, {{password}}, {{md5(password)}}, {{sha256(password)}}, {{base64(password)}}, {{uuid()}}, {{now()}}." },
+            "storageSeed": {
+              "type": "object",
+              "properties": {
+                "localStorage": { "type": "object", "additionalProperties": { "type": "string" } },
+                "sessionStorage": { "type": "object", "additionalProperties": { "type": "string" } }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "storageReset": {
+      "type": "object",
+      "properties": {
+        "indexedDB": { "type": "array", "items": { "type": "object", "required": ["db", "stores"], "properties": { "db": { "type": "string" }, "stores": { "type": "array", "items": { "type": "string" } } } } },
+        "localStorage": { "type": "array", "items": { "type": "string" } },
+        "sessionStorage": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "schemaSources": {
+      "type": "array",
+      "items": { "type": "object", "required": ["kind", "glob"], "properties": { "kind": { "enum": ["openapi", "efcore"] }, "glob": { "type": "string" } } }
+    },
+    "dataSourceRules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pattern"],
+        "properties": {
+          "pattern": { "type": "string" },
+          "verdict": { "enum": ["api", "ui"] },
+          "requiresAlso": { "type": "string" },
+          "verdictIfMissing": { "enum": ["api", "ui"] },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "description": "Site-wide default for how a screen is entered when data-source-map has no entry for it. Observed behaviour, not architecture.",
+      "required": ["entry"],
+      "properties": {
+        "entry": { "enum": ["deeplink", "menu", "unknown"], "description": "deeplink = navigating straight to a URL renders correctly; menu = the app must be walked through its own navigation; unknown = never established." },
+        "evidence": { "type": "string", "description": "Which route was tried and what happened." }
+      }
+    },
+    "recording": { "type": "object", "properties": { "maxBodyKB": { "type": "number", "minimum": 1 }, "bufferHours": { "type": "number", "minimum": 0.1 }, "sessionGapMinutes": { "type": "number", "minimum": 0.1 }, "unclaimedKeepDays": { "type": "number", "minimum": 0.1 } } },
+    "execute": { "type": "object", "properties": { "maxConsecutiveFailures": { "type": "integer", "minimum": 1 } } }
+  },
+  "$defs": {
+    "apiCall": { "type": "object", "required": ["method", "url"], "properties": { "method": { "type": "string" }, "url": { "type": "string" } } }
+  }
+}

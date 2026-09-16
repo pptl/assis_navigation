@@ -1,0 +1,6 @@
+node_modules/
+companion/dist/
+.claude/
+.nav-recorder/
+.playwright-mcp/
+*.log
