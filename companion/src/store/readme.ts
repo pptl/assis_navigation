@@ -42,7 +42,7 @@ Query with \`nav-recorder list\` / \`nav-recorder get-recipe <name>\`; run with 
 - \`actors.json\` — test-account credentials per actor. Real credentials: keep OS file permissions tight.
 - \`sessions/\` — transient state for \`execute-*\` coordination; safe to delete when no execution is in flight.
 
-App origins: ${cfg.appOrigins.map((o) => `\`${o}\``).join(", ")}
+App origins (onboarding defaults — the dev server may use any free port; \`nav-recorder ports\` shows the live one): ${cfg.appOrigins.map((o) => `\`${o}\``).join(", ")}
 API bases: ${cfg.apiBases.map((o) => `\`${o}\``).join(", ")}
 `;
 }

@@ -235,7 +235,7 @@ function finalize(ctx: CommandContext, opts: FinalizeOpts = {}): unknown {
       gitignoreNext,
       ...(report.warnings.length ? [`There are ${report.warnings.length} warning(s) above — resolve each one (re-answer with --force) or explain to the user why it is acceptable.`] : []),
       placeholders.length ? `Ask the user to fill passwords for ${placeholders.join(", ")} in ${join(dataDir, "actors.json")} (never paste passwords into chat).` : "All actor passwords are set.",
-      "Run `nav-recorder doctor` — the extension must be loaded and Chrome restarted so the new origin is recorded.",
+      "Run `nav-recorder doctor` — the extension must be loaded. Nothing registers a port: every loopback page is recorded and the companion works out which project the port belongs to, so the dev server can move ports freely (`nav-recorder ports` shows where recordings are going).",
       `Prove the config with \`nav-recorder execute-start ${SMOKE_RECIPE_NAME}\` and the execute loop from the Skill.`,
       report.unconfirmed.length ? `Tell the user which answers were inferred, not confirmed: ${report.unconfirmed.map((u) => u.key).join(", ")}.` : "All answers were confirmed by the user or verified live.",
     ],

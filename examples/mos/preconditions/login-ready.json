@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schemas/recipe.schema.json",
+  "name": "login-ready",
+  "description": "煙霧 recipe：以 waiter 登入、清除 storageReset 指定的本機狀態、停在 /MOS/Order。用來驗證 config 的登入 selector、auth、storageReset 與落地頁都正確；所有其他 recipe 都建立在同一組設定上。",
+  "createdAt": "2026-09-21T05:33:49.489Z",
+  "targetUrl": "/MOS/Order",
+  "steps": [
+    {
+      "id": "open-landing",
+      "actor": "waiter",
+      "kind": "ui",
+      "action": {
+        "type": "navigate",
+        "url": "/MOS/Order"
+      },
+      "note": "登入由 ensureContext 依 config.login 觸發，不寫成步驟。"
+    },
+    {
+      "id": "wait-landing",
+      "actor": "waiter",
+      "kind": "ui",
+      "action": {
+        "type": "waitFor",
+        "selector": "select",
+        "timeoutMs": 20000
+      },
+      "note": "落地頁的關鍵元素出現代表登入與導航都成功。"
+    }
+  ],
+  "finalNavigation": "/MOS/Order",
+  "finalContext": "waiter",
+  "targetHint": {
+    "url": "/MOS/Order",
+    "note": "煙霧 recipe 沒有下一跳；它只驗證登入、storageReset 與落地頁。"
+  },
+  "verify": {
+    "selectors": [
+      "select"
+    ],
+    "textIncludes": []
+  },
+  "draft": false,
+  "shape": "navigation"
+}

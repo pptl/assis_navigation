@@ -1,0 +1,11 @@
+{
+  "$schema": "../../schemas/actors.schema.json",
+  "actors": {
+    "waiter": {
+      "username": "ALEN",
+      "password": "CHANGE_ME",
+      "contextName": "waiter",
+      "note": "服務員"
+    }
+  }
+}

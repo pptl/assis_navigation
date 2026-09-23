@@ -29,7 +29,7 @@ export const DEFAULT_CONFIG: NavConfig = {
   ],
   // Never assume deep links work: an unproven guess would silently send the Agent to a blank screen.
   navigation: { entry: "unknown" },
-  recording: { maxBodyKB: 64, bufferHours: 2, sessionGapMinutes: 20, unclaimedKeepDays: 7 },
+  recording: { maxBodyKB: 64, bufferHours: 2, sessionGapMinutes: 20, unclaimedKeepDays: 7, unroutedKeepHours: 12 },
   execute: { maxConsecutiveFailures: 3 },
 };
 
@@ -105,6 +105,7 @@ export function validateConfig(cfg: NavConfig): string[] {
   if (!(cfg.recording?.bufferHours > 0)) errors.push("recording.bufferHours must be > 0");
   if (!(cfg.recording?.sessionGapMinutes > 0)) errors.push("recording.sessionGapMinutes must be > 0");
   if (!(cfg.recording?.unclaimedKeepDays > 0)) errors.push("recording.unclaimedKeepDays must be > 0");
+  if (!(cfg.recording?.unroutedKeepHours > 0)) errors.push("recording.unroutedKeepHours must be > 0");
   if (!(cfg.execute?.maxConsecutiveFailures > 0)) errors.push("execute.maxConsecutiveFailures must be > 0");
   return errors;
 }

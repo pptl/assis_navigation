@@ -17,6 +17,12 @@ export function globalDir(): string {
 export function hostsPath(): string { return join(globalDir(), "hosts.json"); }
 export function controlPath(): string { return join(globalDir(), "control.json"); }
 export function hostDir(): string { return join(globalDir(), "host"); }
+/**
+ * Staging area for loopback recordings whose project could not be told (a dev server whose command
+ * line names no project). Lives under the global dir, never inside a repo; `activate --adopt` moves
+ * a port's events into a project, and whatever nobody claims ages out.
+ */
+export function unroutedDir(): string { return join(globalDir(), "unrouted"); }
 export function hostLogPath(): string { return join(globalDir(), "host.log"); }
 
 /** companion/ package root (works from dist/src/*.js). */
@@ -67,6 +73,13 @@ export function resolveDataDir(explicit?: string, opts: { allowOnboarding?: bool
 
 export function projectDirOf(dataDir: string): string {
   return dirname(dataDir);
+}
+
+/** Same directory? Windows spellings differ by drive-letter case depending on where the path came from. */
+export function samePath(a: string, b: string): boolean {
+  const norm = (path: string): string => resolve(path).replace(/[\\/]+$/, "");
+  const [x, y] = [norm(a), norm(b)];
+  return process.platform === "win32" ? x.toLowerCase() === y.toLowerCase() : x === y;
 }
 
 export function p(dataDir: string, ...parts: string[]): string {

@@ -91,7 +91,7 @@
         "evidence": { "type": "string", "description": "Which route was tried and what happened." }
       }
     },
-    "recording": { "type": "object", "properties": { "maxBodyKB": { "type": "number", "minimum": 1 }, "bufferHours": { "type": "number", "minimum": 0.1 }, "sessionGapMinutes": { "type": "number", "minimum": 0.1 }, "unclaimedKeepDays": { "type": "number", "minimum": 0.1 } } },
+    "recording": { "type": "object", "properties": { "maxBodyKB": { "type": "number", "minimum": 1 }, "bufferHours": { "type": "number", "minimum": 0.1 }, "sessionGapMinutes": { "type": "number", "minimum": 0.1 }, "unclaimedKeepDays": { "type": "number", "minimum": 0.1 }, "unroutedKeepHours": { "type": "number", "minimum": 0.1, "description": "How long loopback recordings whose project could not be resolved are kept in the machine-wide staging area." } } },
     "execute": { "type": "object", "properties": { "maxConsecutiveFailures": { "type": "integer", "minimum": 1 } } }
   },
   "$defs": {

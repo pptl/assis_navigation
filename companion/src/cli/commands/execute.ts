@@ -4,6 +4,7 @@ import { loadConfig } from "../../config.js";
 import { resolveDataDir } from "../../paths.js";
 import { executeNext, executeReport, executeStart, type ReportInput } from "../../execute/session.js";
 import { deleteSession, loadSession, type StorageSnapshot } from "../../store/sessions.js";
+import { withLiveOrigin } from "../../execute/urls.js";
 import { existsSync } from "node:fs";
 import { readText } from "../../util/fs.js";
 
@@ -26,8 +27,8 @@ export const executeStartCommand: CommandDef = {
     const name = ctx.positionals[0];
     if (!name) throw new CliError("E_USAGE", "execute-start <recipe-name>");
     const dataDir = resolveDataDir(ctx.project);
-    const cfg = loadConfig(dataDir);
-    return executeStart(dataDir, cfg, name, ctx.bool("probe"));
+    const { cfg, appOrigin } = withLiveOrigin(dataDir, loadConfig(dataDir));
+    return { ...executeStart(dataDir, cfg, name, ctx.bool("probe")), appOrigin };
   },
 };
 
@@ -39,8 +40,8 @@ export const executeNextCommand: CommandDef = {
     const id = ctx.positionals[0];
     if (!id) throw new CliError("E_USAGE", "execute-next <sessionId>");
     const dataDir = resolveDataDir(ctx.project);
-    const cfg = loadConfig(dataDir);
-    return executeNext(dataDir, cfg, id);
+    const { cfg, appOrigin } = withLiveOrigin(dataDir, loadConfig(dataDir));
+    return { ...executeNext(dataDir, cfg, id), appOrigin };
   },
 };
 
@@ -67,7 +68,8 @@ export const executeReportCommand: CommandDef = {
     const status = ctx.str("status");
     if (!id || (status !== "ok" && status !== "error")) throw new CliError("E_USAGE", "execute-report <sessionId> --status ok|error ...");
     const dataDir = resolveDataDir(ctx.project);
-    const cfg = loadConfig(dataDir);
+    // Best effort: an outcome must still be reportable when the dev server has gone away mid-run.
+    const { cfg } = withLiveOrigin(dataDir, loadConfig(dataDir), { required: false });
     const httpStatusRaw = ctx.str("http-status");
     const input: ReportInput = {
       status,

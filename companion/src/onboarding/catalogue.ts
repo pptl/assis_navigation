@@ -60,7 +60,7 @@ export const CATALOGUE: FieldDef[] = [
     key: "appOrigins",
     required: true,
     configPath: "appOrigins",
-    hint: "本機開發站台的 origin。看 package.json scripts（PORT=、--port）、vite.config.* 的 server.port、.env*（PORT / VITE_PORT）、angular.json 的 serve 設定、launchSettings.json 的 applicationUrl、webpack devServer.port；都沒有就用框架預設（CRA/Next 3000、Vite 5173、Angular 4200）。",
+    hint: "本機開發站台的 origin。看 package.json scripts（PORT=、--port）、vite.config.* 的 server.port、.env*（PORT / VITE_PORT）、angular.json 的 serve 設定、launchSettings.json 的 applicationUrl、webpack devServer.port；都沒有就用框架預設（CRA/Next 3000、Vite 5173、Angular 4200）。埠只是這裡的預設值，不必固定：錄製歸屬與執行網址都是依實際在監聽的埠判斷的（nav-recorder ports）。",
     verify: "用 browser_navigate 打開該網址，能載入應用程式即為 verified。",
     question: "本機開發站台的網址是什麼（含 http(s):// 與埠號）？",
     validate: viaConfig("appOrigins"),

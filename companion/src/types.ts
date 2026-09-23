@@ -194,7 +194,7 @@ export interface NavConfig {
   dataSourceRules: DataSourceRule[];
   /** site-wide default for how screens are entered; per-route exceptions live in data-source-map */
   navigation: NavigationConfig;
-  recording: { maxBodyKB: number; bufferHours: number; sessionGapMinutes: number; unclaimedKeepDays: number };
+  recording: { maxBodyKB: number; bufferHours: number; sessionGapMinutes: number; unclaimedKeepDays: number; unroutedKeepHours: number };
   execute: { maxConsecutiveFailures: number };
 }
 
@@ -213,9 +213,20 @@ export interface ActorsFile {
 
 // ---------- Global files under %USERPROFILE%/.nav-recorder ----------
 
+export interface PortLease {
+  /** absolute path of the project's .nav-recorder directory */
+  dataDir: string;
+  /** pid owning the port when the lease was written; a different pid means the lease is stale */
+  pid?: number;
+  since: string;
+}
+
 export interface HostsFile {
-  /** origin → absolute path of the project's .nav-recorder directory */
+  /** origin → absolute path of the project's .nav-recorder directory. Non-loopback sites only:
+   *  loopback ownership is resolved from the process holding the port, never registered. */
   origins: Record<string, string>;
+  /** manual fallback for loopback ports whose owner cannot be resolved (non-node dev servers) */
+  ports?: Record<string, PortLease>;
 }
 
 export interface ControlFile {

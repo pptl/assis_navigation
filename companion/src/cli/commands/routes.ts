@@ -8,6 +8,7 @@ import { findRoutes, getRoute, listRoutes, loadRouteCatalogue, recordRoutes, typ
 import { extractRoutes, readJsonTree, summarise } from "../../routes/importTree.js";
 import { recentRoutes } from "../../routes/recent.js";
 import { tidyRaw } from "../tidyRaw.js";
+import { noEventsHint, portsReport, type PortsReport } from "../portsReport.js";
 import { normRoute } from "../../util/route.js";
 
 function splitChain(raw: string): string[] {
@@ -27,12 +28,14 @@ export const routesCommand: CommandDef = {
         const tidy = tidyRaw(dataDir);
         const raw = ctx.str("from-seq");
         const result = recentRoutes(dataDir, cfg, raw !== undefined ? Number(raw) : undefined);
+        const ports = result.routes.length ? undefined : portsReport(dataDir);
         return {
           ...result,
           ...tidy,
+          ports,
           note: result.routes.length
             ? "These are the routes the recording actually visited, most recent first. The screen the user described is almost always here — they were looking at it while describing it."
-            : "No navigations recorded since the last claim. Is the extension loaded and the origin registered? (nav-recorder doctor)",
+            : `No navigations recorded since the last claim. ${noEventsHint(ports as PortsReport)}`,
         };
       }
       case "find": {

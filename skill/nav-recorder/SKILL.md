@@ -54,9 +54,9 @@ description: 開發網頁專案時，凡是收到「開始改動 XX 功能」「
    ```
    nav-recorder init finalize --pretty
    ```
-   產生 `config.json`、`actors.json`、`preconditions/login-ready.json`、README，註冊 origin，並把去掉密碼的範本回寫到工具 repo 的 `examples/<專案名>/`（下次別台機器可 `init --template <專案名>`）。
+   產生 `config.json`、`actors.json`、`preconditions/login-ready.json`、README，並把去掉密碼的範本回寫到工具 repo 的 `examples/<專案名>/`（下次別台機器可 `init --template <專案名>`）。**埠不需要登記**：所有 loopback 頁面都照錄，事件算哪個專案由 Companion 從佔用該埠的 process 推出來，所以 dev server 換埠不影響任何事（`nav-recorder ports` 可查）。只有非 loopback 的站台（前端掛在遠端測試站台）才會被註冊。
 7. **處理 `.gitignore`**：finalize 會把兩個目錄加進最近的 git 根目錄 `.gitignore`：`.nav-recorder/`（測試帳密與原始流量）和 `.playwright-mcp/`（Playwright MCP server 在專案目錄下落地的頁面快照 `page-*.yml`、console log、截圖，內含畫面內容與 ref 編號，是一次性中間產物）。兩者都絕對不能進 git。輸出的 `gitignore` 欄位說明結果：`added` → 看 `added` 陣列知道這次補了哪幾行（`present` 陣列是本來就有的），`.gitignore` 可能在專案上層，這是使用者 repo 裡被追蹤的檔案，回報時明確告訴他改了哪個檔案；`present` → 兩個都已存在，不用動；`no-git-root` → 找不到 git 根目錄，你要自己在專案會被版本控制的位置加上 `patterns` 列出的每一行並告知使用者。`doctor` 的 `gitignore` 項目會持續檢查這兩個目錄；舊專案只缺 `.playwright-mcp/` 時，直接補進同一個 `.gitignore` 即可。
-8. 收尾：請使用者填 `actors.json` 的密碼並重啟 Chrome → `nav-recorder doctor` 全綠 → 用步驟 5 的迴圈執行 `nav-recorder execute-start login-ready`，跑到 `done` 且畫面停在落地頁，代表登入 selector、auth、storageReset、落地頁全部正確。回報時附上 `unconfirmed` 清單（哪些答案是推論、依據是什麼）。
+8. 收尾：請使用者填 `actors.json` 的密碼（extension 已載入就不必重啟 Chrome——loopback 一律錄，沒有要同步的白名單）→ `nav-recorder doctor` 全綠 → 用步驟 5 的迴圈執行 `nav-recorder execute-start login-ready`，跑到 `done` 且畫面停在落地頁，代表登入 selector、auth、storageReset、落地頁全部正確。回報時附上 `unconfirmed` 清單（哪些答案是推論、依據是什麼）。
 
 各欄位去哪找證據、怎麼驗證、找不到問什麼，以 `init catalogue` 的輸出為準；`docs/CONFIG.md` 的「怎麼蒐集」欄與它同步。
 
@@ -96,7 +96,11 @@ description: 開發網頁專案時，凡是收到「開始改動 XX 功能」「
    - `path.hops` 全部 `clicks` 為空、但 raw 明明有操作 → extension 沒重新載入（`nav-recorder doctor` 的 `interactions recorded` 會紅），請使用者到 chrome://extensions 重新載入後再操作一次。
 5. 錯誤處理：
    - `E_NO_ANCHOR`：錄製裡沒有導航到你給的 path。看 `details.routes`（與 `routes recent` 同一份清單，附中文名與選單位置），挑正確的 path 重呼叫；都不像就問使用者「你剛才是在哪個畫面確認需求的？」。
-   - `E_NO_EVENTS`：沒有任何錄製。告訴使用者 extension 可能沒載入或 origin 沒註冊（`nav-recorder doctor`），然後在沒有 recipe 的情況下繼續任務（步驟 7 改為自己用 Playwright 探查）。
+   - `E_NO_EVENTS`：沒有任何錄製。**先看 `details`**（就是 `nav-recorder ports` 的內容）：
+     - `unrouted` 有東西 → 使用者的操作被收進暫存區了（那個 dev server 的命令列看不出屬於哪個專案）。確認那個埠就是本專案的站台後 `nav-recorder activate --port <n> --adopt`，再重跑一次本步驟。
+     - `mine` 是空的 → 沒有任何在監聽的埠被判給這個專案，多半是 dev server 沒起來。
+     - 兩者都正常 → 使用者可能真的還沒操作，或分頁不是作用中的那個（只錄 focus 的分頁）；也可能 extension 沒載入（`nav-recorder doctor`）。
+     都排除不了就在沒有 recipe 的情況下繼續任務（步驟 7 改為自己用 Playwright 探查）。
    - `E_NO_PROJECT`：先確認 `--project` 指對；專案真的沒有 `.nav-recorder/` 就先做步驟 0。
 6. 看 `scope`、`segments` 與 `warnings`：認領範圍是「上次認領到現在」。一天做好幾個任務時（小任務常常根本沒走這個 skill、也沒認領），它會橫跨好幾段不相干的瀏覽，前一個任務的請求會因為共用同一個使用者、同一批主檔資料，被值流分析串進來。所以 Companion 會把認領範圍機械切成「瀏覽段落」（閒置超過 `recording.sessionGapMinutes`、新分頁首次載入、回到登入頁），**預設只蒸餾到達目標畫面的那一段**；同一分頁內回到登入頁的邊界會往前併（視為同一任務內換角色或登入逾時）。更早的段落照樣被認領，但不蒸餾，列在 `scope.excludedSegments`。
    - `pendingDecisions` 有 `excludedSteps` → 被排除的段落裡有「整段蒸餾會留下」的步驟，`options` 逐條列出。判斷它們是不是這次任務的前置：是（在另一個分頁建立了目標畫面要看的那筆資料、在另一個分頁換角色簽核）→ 照 message 用 `--from-seq` 重跑（明確指定範圍就整段蒸餾），並刪掉這份草稿；不是（前一個任務留下的）→ 刪掉這個 decision 即可。它常和 `existingData` 一起出現，兩者講的是同一件事，擇一處理。
@@ -172,6 +176,8 @@ loop:
   依序處理 ensureContext → switchTab → action
   execute-report <sessionId> ...    → continue | halt | done
 ```
+
+**網址一律用 Companion 給的**，不要拿 `config.appOrigins` 自己拼：dev server 每次拿到的埠可能不同，Companion 會依實際在監聽的埠拼好（輸出的 `appOrigin` 就是這一趟用的）。`execute-start` / `execute-next` 回 `E_NO_DEV_SERVER` 代表沒有任何監聽中的埠屬於這個專案——先把 dev server 起起來（或看 `details.listening` 確認狀況）再重跑，不要自己猜一個網址去導航。
 
 ### 指令欄位
 

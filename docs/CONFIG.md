@@ -5,7 +5,7 @@ Companion 與 extension 本身不含任何專案特定邏輯；每個專案的�
 | 欄位 | 型別 | 說明 |
 |---|---|---|
 | `name` | string | 專案名稱，只用於顯示。 |
-| `appOrigins` | string[] | 前端的 origin（`http://localhost:3000`）。extension 只錄這些 origin；`init` 會把它們註冊進 `hosts.json`。 |
+| `appOrigins` | string[] | 前端的 origin（`http://localhost:3000`），onboarding 時用來驗證站台的預設值。**不是錄製歸屬的依據，也不必固定埠**：extension 對所有 loopback 頁面照錄，事件算哪個專案由 host 從佔用該埠的 process 推出來（`nav-recorder ports`）；執行 recipe 的網址也是依實際監聽的埠拼的，這裡的埠只在推不出來時當備援。非 loopback 的 origin（前端掛在遠端測試站台）才會被 `init` 註冊進 `hosts.json`。 |
 | `apiBases` | (string \| DerivedApiBase)[] | API 根網址，**必須以 `/` 結尾**。錄到的絕對 URL 會對這些 base 取相對路徑存進 recipe，執行時用 `apiBases[0]` 拼回去，換環境只要改這裡。主機值若寫在專案設定檔且會更換，改用推導物件（見下方），Companion 每次載入重新查值。 |
 | `readOnlyPatterns` | string[] | Layer 1 的擴充：GET/HEAD/OPTIONS 永遠視為讀取；此外 URL path（完整 pathname 與相對 apiBase 的路徑都會測）符合任一 regex 者也視為讀取並丟棄。比對不分大小寫。**務必結尾錨定**（`(Search|Detail)$`），子字串比對會誤刪寫入（`OrderImportSearch` 是讀，`OrderImport` 是寫）。 |
 | `auth.kind` | `bearer` / `cookie` / `none` | API 步驟怎麼帶身份。`bearer`：Agent dev 從 `tokenSource` 讀 token 放進 `header`；`cookie`：靠瀏覽器 cookie；`none`：不帶。 |
@@ -25,6 +25,7 @@ Companion 與 extension 本身不含任何專案特定邏輯；每個專案的�
 | `recording.maxBodyKB` | number | 紀錄用途（extension 目前固定 64 KB 截斷）。落盤時 512 字元以上的 response body 以 sha1 去重，同一天只在同名 `.bodies.ndjson` 存一份，事件行改帶 `responseBodyRef`；每次呼叫仍各佔一行。 |
 | `recording.bufferHours` | number | 滾動緩衝保留時數（預設 2）。以整天為單位刪檔：某天的檔案（連同 `.bodies.ndjson`）要等「隔天 + bufferHours」過了、**而且檔內每筆事件都已被認領或 discard** 才會刪。清理在 extension 重新連上 host 時，以及 `capture-recent` / `discard` / `routes recent` 執行後觸發。 |
 | `recording.unclaimedKeepDays` | number | 沒被認領的日檔最多保留幾天（預設 7，從該日結束起算）。避免 agent 從沒認領時 raw 無限累積，也不會隔天就刪掉還沒被認領的錄製。 |
+| `recording.unroutedKeepHours` | number | 推不出歸屬的 loopback 錄製在 `%USERPROFILE%\.nav-recorder\unrouted\` 的保留時數（預設 12，同樣以整天為單位刪檔）。這個值全機共用，取各專案設定中最大者。 |
 | `recording.sessionGapMinutes` | number | 蒸餾時切「瀏覽段落」的閒置門檻（預設 20）。連續兩筆事件間隔超過它、新分頁首次載入、或回到 `login.url`，都算新的一段。`capture-recent` 預設只蒸餾到達目標畫面的那一段（同分頁回到登入頁的邊界會往前併），更早的段落照樣認領但不蒸餾，會留下的步驟列成 `excludedSteps` 決策；`--all` 或明確的 `--from-seq` 整段蒸餾。 |
 | `execute.maxConsecutiveFailures` | number | 同一支 API 連續失敗幾次就 `halt`（預設 3）。 |
 
@@ -83,7 +84,8 @@ Companion 與 extension 本身不含任何專案特定邏輯；每個專案的�
 
 `%USERPROFILE%\.nav-recorder\`（可用環境變數 `NAV_RECORDER_HOME` 覆寫）：
 
-- `hosts.json`：`{"origins": {"<origin>": "<dataDir>"}}`。Chrome 啟動 host 時沒有工作目錄，事件靠這張表路由到專案。`init` 自動維護。
+- `hosts.json`：`{"origins": {...}, "ports": {...}}`。`origins`（`"<origin>": "<dataDir>"`）只放**非 loopback** 的前端站台，`init` 自動維護。loopback 不在這裡：埠是浮動的，歸屬由 host 從佔用該埠的 process 的命令列推出來（`nav-recorder ports` 可查）。`ports`（`"<port>": {dataDir, pid, since}`）是推不出來時的人工後路，由 `activate --port` 寫入；`pid` 對不上就作廢，不是永久綁定。
+- `unrouted/`：推不出歸屬的 loopback 錄製暫存於此（結構同專案的 `raw/`），`activate --port <n> --adopt` 認領，其餘依 `recording.unroutedKeepHours` 清掉。
 - `control.json`：`pause` / `resume` 寫入；host 每筆事件先讀它。
 - `host/`：native messaging manifest 與 wrapper。
 - `host.log`：host 的診斷紀錄（stdout 留給 framing，stderr 會被 Chrome 吞掉）。

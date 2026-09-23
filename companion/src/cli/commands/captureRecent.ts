@@ -5,6 +5,7 @@ import { resolveDataDir } from "../../paths.js";
 import { captureRecent, discardRecent } from "../../distill/capture.js";
 import { recentRoutes } from "../../routes/recent.js";
 import { tidyRaw } from "../tidyRaw.js";
+import { noEventsHint, portsReport } from "../portsReport.js";
 
 export const discardCommand: CommandDef = {
   name: "discard",
@@ -31,7 +32,10 @@ export const captureRecentCommand: CommandDef = {
     // the same recording is still there for the real call.
     if (!targetUrl) {
       const recent = recentRoutes(dataDir, cfg, fromSeqRaw !== undefined ? Number(fromSeqRaw) : undefined);
-      if (!recent.events) throw new CliError("E_NO_EVENTS", `No recorded events after seq ${recent.fromSeq}. Is the extension loaded and the origin registered? (nav-recorder doctor)`);
+      if (!recent.events) {
+        const report = portsReport(dataDir);
+        throw new CliError("E_NO_EVENTS", `No recorded events after seq ${recent.fromSeq}. ${noEventsHint(report)}`, report);
+      }
       return {
         mode: "candidates",
         ...recent,

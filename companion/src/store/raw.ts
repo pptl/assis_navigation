@@ -93,13 +93,18 @@ function knownIn(sidecar: string): Set<string> {
   return known;
 }
 
-/** Append one event to today's NDJSON file, assigning seq/receivedAt. Returns the enriched event (body inline). */
-export function appendEvent(dataDir: string, ev: RecorderEvent): RecorderEvent {
+/**
+ * Append one event to today's NDJSON file, assigning seq/receivedAt. Returns the enriched event (body inline).
+ * `keepReceivedAt` is for events moved between stores (adopting staged recordings): seq is always
+ * reassigned for the destination, but the time the event was recorded must not change — segmentation
+ * and "what did I just do" both read it.
+ */
+export function appendEvent(dataDir: string, ev: RecorderEvent, opts: { keepReceivedAt?: boolean } = {}): RecorderEvent {
   ensureDir(rawDir(dataDir));
   const meta = readMeta(dataDir);
   const now = new Date();
   const seq = meta.lastSeq + 1;
-  const receivedAt = now.toISOString();
+  const receivedAt = (opts.keepReceivedAt ? ev.receivedAt : undefined) ?? now.toISOString();
   const enriched: RecorderEvent = { ...ev, seq, receivedAt };
   const file = join(rawDir(dataDir), `${localDateStamp(now)}.ndjson`);
   const sidecar = bodiesPathOf(file);

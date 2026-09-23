@@ -1,11 +1,24 @@
-// MV3 service worker: bridges page events to the native host and keeps the origin whitelist in sync.
+// MV3 service worker: bridges page events to the native host.
+//
+// What gets recorded is decided here and is deliberately coarse — every loopback page, plus any
+// extra site the host lists. Which project a recording belongs to is decided by the companion, from
+// the process holding the port; this worker never needs to know about ports or projects.
 //
 // Lifecycle: Chrome may kill this worker whenever the page is idle. Everything that must survive
-// (origin whitelist, pause flag) lives in chrome.storage.local; the native host itself persists all
+// (extra origins, pause flag) lives in chrome.storage.local; the native host itself persists all
 // recorded data on disk, so a dead worker never loses anything that already left the page.
 
 const HOST_NAME = "com.navrecorder.companion";
 const SCRIPT_IDS = { interceptor: "nav-recorder-interceptor", relay: "nav-recorder-relay", interactions: "nav-recorder-interactions" };
+// Dev servers get whatever port is free, so ports are never part of the whitelist: every loopback
+// page is recorded and the companion works out which project the port belongs to. Match patterns
+// carry no port, so one pattern per host covers all of them. state.origins only adds sites that are
+// not loopback (an app served from a remote test site).
+const LOOPBACK_MATCHES = [
+  "http://localhost/*", "https://localhost/*",
+  "http://*.localhost/*", "https://*.localhost/*",
+  "http://127.0.0.1/*", "https://127.0.0.1/*",
+];
 const MAX_BUFFER = 200;
 const BACKOFF_MIN = 500;
 const BACKOFF_MAX = 8000;
@@ -31,8 +44,7 @@ async function registerScripts(origins) {
   } catch (e) {
     console.warn("[nav-recorder] unregister failed", e);
   }
-  const matches = origins.map((o) => o.replace(/\/+$/, "") + "/*");
-  if (!matches.length) return;
+  const matches = [...LOOPBACK_MATCHES, ...origins.filter((o) => !isLoopbackUrl(o)).map((o) => o.replace(/\/+$/, "") + "/*")];
   try {
     await chrome.scripting.registerContentScripts([
       { id: SCRIPT_IDS.interceptor, js: ["interceptor.js"], matches, runAt: "document_start", world: "MAIN", allFrames: false, persistAcrossSessions: true },
@@ -46,10 +58,9 @@ async function registerScripts(origins) {
 
 async function setOrigins(origins) {
   const next = [...new Set((origins || []).filter((o) => typeof o === "string" && /^https?:\/\//.test(o)))];
-  const changed = JSON.stringify(next) !== JSON.stringify(state.origins);
   state.origins = next;
   await chrome.storage.local.set({ origins: next });
-  if (changed || next.length) await registerScripts(next);
+  await registerScripts(next); // always: the loopback patterns must be registered even with an empty list
 }
 
 async function setPaused(paused) {
@@ -57,10 +68,19 @@ async function setPaused(paused) {
   await chrome.storage.local.set({ paused: state.paused });
 }
 
-function isWhitelisted(url) {
+function isLoopbackUrl(url) {
   try {
-    const origin = new URL(url).origin;
-    return state.origins.includes(origin);
+    const h = new URL(url).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    return h === "localhost" || h === "127.0.0.1" || h === "::1" || h.endsWith(".localhost");
+  } catch {
+    return false;
+  }
+}
+
+function shouldRecord(url) {
+  if (isLoopbackUrl(url)) return true;
+  try {
+    return state.origins.includes(new URL(url).origin);
   } catch {
     return false;
   }
@@ -143,7 +163,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     const tab = sender.tab;
     if (!tab || tab.active !== true) return; // only the tab the user is looking at
     const tabUrl = tab.url || sender.url || "";
-    if (!isWhitelisted(tabUrl)) return;
+    if (!shouldRecord(tabUrl)) return;
     const ev = msg.event;
     ev.tabId = tab.id;
     ev.tabUrl = tabUrl;
@@ -158,7 +178,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
 async function onNavigation(details, transition) {
   if (details.frameId !== 0) return;
   await ready;
-  if (!isWhitelisted(details.url)) return;
+  if (!shouldRecord(details.url)) return;
   let tab = null;
   try { tab = await chrome.tabs.get(details.tabId); } catch { return; }
   if (!tab || tab.active !== true) return;

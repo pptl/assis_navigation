@@ -14,6 +14,7 @@ import { hostManifestPath, hostWrapperPath, registryKey } from "./registerHost.j
 import { CliError } from "../../errors.js";
 import { loadOnboarding, statusReport } from "../../onboarding/state.js";
 import { IGNORE_PATTERNS, findGitRoot, gitignoreHas } from "../../onboarding/scaffold.js";
+import { noEventsHint, portsReport } from "../portsReport.js";
 
 interface Check { name: string; ok: boolean; detail: string }
 
@@ -52,8 +53,8 @@ export const doctorCommand: CommandDef = {
     add("wrapper file", existsSync(hostWrapperPath()), hostWrapperPath());
 
     const hosts = loadHosts();
-    const originCount = Object.keys(hosts.origins).length;
-    add("registered origins", originCount > 0, originCount ? Object.entries(hosts.origins).map(([o, d]) => `${o} → ${d}`).join("; ") : "none — run `nav-recorder init` in a project");
+    const extraOrigins = Object.entries(hosts.origins);
+    if (extraOrigins.length) add("non-loopback origins", true, extraOrigins.map(([o, d]) => `${o} → ${d}`).join("; "));
     const control = loadControl();
     add("recording", !control.paused, control.paused ? `PAUSED since ${control.updatedAt} (nav-recorder resume)` : "active");
     add("host log", existsSync(hostLogPath()), existsSync(hostLogPath()) ? hostLogPath() : "no host log yet — Chrome has not launched the host (check extension + restart Chrome)");
@@ -84,9 +85,15 @@ export const doctorCommand: CommandDef = {
     if (dataDir && existsSync(join(dataDir, "config.json"))) {
       try {
         const cfg = loadConfig(dataDir);
-        add("config", true, `${dataDir} (${cfg.name}; origins ${cfg.appOrigins.join(", ")})`);
-        const missing = cfg.appOrigins.filter((o) => hosts.origins[o] !== dataDir);
-        add("origins registered for this project", missing.length === 0, missing.length ? `not registered: ${missing.join(", ")} — re-run init or fix hosts.json` : "ok");
+        add("config", true, `${dataDir} (${cfg.name}; onboarding origins ${cfg.appOrigins.join(", ")})`);
+        // Ports are not registered anywhere: what matters is whether a live one resolves to this project.
+        const report = portsReport(dataDir);
+        add("ports serving this project", report.mine.length > 0, report.mine.length
+          ? `${report.mine.join(", ")} — recordings from these ports land here`
+          : `none — ${noEventsHint(report)}`);
+        if (report.unrouted.length) {
+          add("staged recordings", false, `${report.unrouted.map((u) => `port ${u.port}: ${u.events} event(s), last ${u.lastAt}`).join("; ")} — \`nav-recorder activate --port <n> --adopt\` takes them into a project, otherwise they age out`);
+        }
         // Without this, every route not in data-source-map is a coin flip on handover.
         const entry = cfg.navigation.entry;
         add("navigation entry", entry !== "unknown", entry === "unknown"

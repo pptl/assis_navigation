@@ -49,9 +49,13 @@ Chrome 以未知的工作目錄啟動 host，所以所有路徑都是絕對路�
 2. 「載入未封裝項目」→ 選 `<repo>\extension`。
 3. 核對卡片上的 ID 與步驟 2 相同。不同代表 manifest 的 `key` 被改過，用實際 ID 重跑步驟 3。
 4. **之後每次更新 `extension/` 的檔案**（例如新增了 `interactions.js`），都要回到 `chrome://extensions` 按該卡片的「重新載入」，再重新整理應用程式的分頁；content script 是在頁面載入時注入的，沒重新整理的分頁還跑舊版。`nav-recorder doctor` 的 `interactions recorded` 項目會在錄到請求卻沒錄到點擊時提醒。
-4. 點一下工具列上的 nav-recorder 圖示可強制重新連線 host（`nav-recorder init` 之後用得到）。
+4. 點一下工具列上的 nav-recorder 圖示可強制重新連線 host（極少用得到，見下）。
 
-Extension 不會固定注入任何網站：它在啟動時向 Companion 要 origin 白名單（`hosts.json`），只對白名單 origin 註冊 content script。白名單為空時什麼都不錄。
+Extension 只錄兩種頁面：**所有 loopback 頁面**（`localhost`、`127.0.0.1`，不分埠號）與 Companion 另外指定的非 loopback 站台（例如前端掛在遠端測試站台的專案，來自 `hosts.json` 的 `origins`）。
+
+**埠不需要登記。** 一個專案不會綁死一個埠——dev server 拿到哪個埠取決於它開放什麼、哪些埠沒被占用——所以「這筆錄製算哪個專案」是 Companion 事後推出來的：從埠找到佔用它的 process，讀它（必要時往上找父行程）的命令列，裡面帶著專案的絕對路徑。換埠、換專案、重啟 server 都不必做任何事。`nav-recorder ports` 一眼看到目前每個埠算哪個專案。
+
+推不出來的（命令列沒有專案路徑，例如 .NET 或 Python 起的 server）不會被丟掉，會先收進 `%USERPROFILE%\.nav-recorder\unrouted\`，`nav-recorder activate --port <n> --adopt` 可以把它認進專案，沒人認的會依保留期清掉。
 
 ## 5. 在目標專案 onboarding（第一次接這個專案）
 
@@ -125,6 +129,6 @@ nav-recorder doctor --project <專案根目錄> --extension-id dmhhbopjoeacoepde
 ## 疑難排解
 
 - `doctor` 說沒有 host log：Chrome 從未啟動 host。確認 registry / manifest 路徑、extension ID、以及 Chrome 是否重啟過。看 `%USERPROFILE%\.nav-recorder\host.log`。
-- 有 host log 但沒有事件：origin 沒在 `hosts.json`；或該 tab 不是作用中的分頁（只錄目前 focus 的分頁）；或 `nav-recorder pause` 後忘了 `resume`。
+- 有 host log 但沒有事件：先跑 `nav-recorder ports`。`mine` 是空的代表沒有任何在監聽的埠被判給這個專案（dev server 沒起來，或它的命令列看不出專案——後者用 `activate --port <n>`）；`unrouted` 有東西代表操作被收進暫存區，用 `activate --port <n> --adopt` 認回來。其餘可能：該 tab 不是作用中的分頁（只錄目前 focus 的分頁）；或 `nav-recorder pause` 後忘了 `resume`。
 - 事件有但 `capture-recent` 說 `E_NO_ANCHOR`：`--target-url` 的 path 跟實際導航不同，看 `details.recentNavigations`。
 - 寫入型請求被丟掉：`readOnlyPatterns` 太寬。pattern 必須結尾錨定（`…Search$`），不要用子字串。

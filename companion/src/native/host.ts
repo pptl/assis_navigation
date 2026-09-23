@@ -1,7 +1,8 @@
 import { join } from "node:path";
 import type { RecorderEvent, RequestEvent } from "../types.js";
-import { loadControl, loadHosts, lookupDataDir } from "../hosts.js";
-import { hostLogPath } from "../paths.js";
+import { loadControl, loadHosts, ownerOfOrigin } from "../hosts.js";
+import { hostLogPath, unroutedDir } from "../paths.js";
+import { loopbackPortOf } from "../util/ports.js";
 import { appendEvent, pruneRaw, rawDir, type RetentionPolicy } from "../store/raw.js";
 import { DEFAULT_CONFIG } from "../config.js";
 import { AuthProvenance } from "../distill/layer2bAuthProvenance.js";
@@ -31,6 +32,21 @@ function readRetention(dataDir: string): RetentionPolicy {
   } catch {
     return fallback;
   }
+}
+
+/** The staging area is shared, so the most generous project setting wins. */
+function unroutedKeepHours(dataDirs: Iterable<string>): number {
+  let hours = DEFAULT_CONFIG.recording.unroutedKeepHours;
+  for (const dir of dataDirs) {
+    const cfgPath = join(dir, "config.json");
+    if (!existsSync(cfgPath)) continue;
+    try {
+      const cfg = readJson<{ recording?: { unroutedKeepHours?: number } }>(cfgPath);
+      const h = cfg.recording?.unroutedKeepHours;
+      if (typeof h === "number" && h > hours) hours = h;
+    } catch { /* invalid config must not stop pruning */ }
+  }
+  return hours;
 }
 
 /**
@@ -75,13 +91,26 @@ export async function runNativeHost(): Promise<void> {
     if (!ev.origin) {
       try { ev.origin = new URL(ev.tabUrl ?? (ev as RequestEvent).url).origin; } catch { return; }
     }
-    const dataDir = lookupDataDir(ev.origin);
+    const owner = ownerOfOrigin(ev.origin);
+    let dataDir = owner?.dataDir;
     if (!dataDir) {
+      // A loopback recording whose project cannot be told is staged, not dropped: the dev server may
+      // simply not name its project on its command line (.NET, Python), and the operations the user
+      // just performed are worth keeping until someone adopts them. Anything else is ignored.
+      if (loopbackPortOf(ev.origin) === undefined) {
+        if (!unknownOrigins.has(ev.origin)) {
+          unknownOrigins.add(ev.origin);
+          log.warn("event for unregistered origin ignored", { origin: ev.origin });
+        }
+        return;
+      }
+      dataDir = unroutedDir();
       if (!unknownOrigins.has(ev.origin)) {
         unknownOrigins.add(ev.origin);
-        log.warn("event for unregistered origin ignored", { origin: ev.origin });
+        log.info("unresolved loopback origin staged in unrouted/", { origin: ev.origin });
       }
-      return;
+    } else if (unknownOrigins.has(ev.origin)) {
+      unknownOrigins.delete(ev.origin); // resolvable again (dev server restarted): log it if it lapses once more
     }
     // Only requests go through auth provenance; navigation and interaction events are stored as-is.
     // Navigation ↔ click attachment happens at read time (distill/trail.ts): the host dies whenever
@@ -104,13 +133,23 @@ export async function runNativeHost(): Promise<void> {
         lastPausedSent = paused;
         send({ type: "ident-ack", origins: Object.keys(hosts.origins), paused, version: VERSION });
         log.info("ident", { extensionId: (msg as IdentMessage).extensionId, origins: Object.keys(hosts.origins) });
-        for (const dataDir of new Set(Object.values(hosts.origins))) {
+        const known = new Set([...Object.values(hosts.origins), ...Object.values(hosts.ports ?? {}).map((l) => l.dataDir)]);
+        for (const dataDir of known) {
           try {
             const removed = pruneRaw(dataDir, readRetention(dataDir));
             if (removed.length) log.info("pruned raw files", { dataDir, removed });
           } catch (e) {
             log.warn("prune failed", { dataDir, error: String(e) });
           }
+        }
+        try {
+          // Whole-day granularity: a staged day file goes once its day plus unroutedKeepHours is over,
+          // claimed or not — hence the same threshold expressed in both fields.
+          const hours = unroutedKeepHours(known);
+          const removed = pruneRaw(unroutedDir(), { bufferHours: hours, unclaimedKeepDays: hours / 24 });
+          if (removed.length) log.info("pruned unrouted files", { removed });
+        } catch (e) {
+          log.warn("unrouted prune failed", { error: String(e) });
         }
         return;
       }

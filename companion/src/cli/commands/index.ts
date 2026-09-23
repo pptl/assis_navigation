@@ -8,6 +8,8 @@ import { executeCancelCommand, executeNextCommand, executeReportCommand, execute
 import { captureRecentCommand, discardCommand } from "./captureRecent.js";
 import { dataSourceCommand } from "./dataSource.js";
 import { routesCommand } from "./routes.js";
+import { portsCommand } from "./ports.js";
+import { activateCommand } from "./activate.js";
 
 const all: CommandDef[] = [
   initCommand,
@@ -25,6 +27,8 @@ const all: CommandDef[] = [
   executeCancelCommand,
   dataSourceCommand,
   routesCommand,
+  portsCommand,
+  activateCommand,
   pauseCommand,
   resumeCommand,
 ];

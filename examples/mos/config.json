@@ -1,0 +1,75 @@
+{
+  "$schema": "../../schemas/config.schema.json",
+  "name": "mos",
+  "appOrigins": [
+    "http://localhost:3000"
+  ],
+  "apiBases": [
+    "https://mosdev-esd.genesys-tech.com/ESD_MOS/"
+  ],
+  "readOnlyPatterns": [
+    "(Search|Detail|DetailList|List|Verify|PrepareCount|CheckValid|CheckSitCustomer)$"
+  ],
+  "auth": {
+    "kind": "bearer",
+    "header": "Authorization",
+    "tokenSource": {
+      "area": "localStorage",
+      "key": "userInfo"
+    }
+  },
+  "login": {
+    "kind": "ui",
+    "url": "/MOS/Login",
+    "fields": {
+      "username": "input[placeholder='請輸入帳號...']",
+      "password": "input[placeholder='請輸入密碼...']"
+    },
+    "submit": "button:has-text('登入')",
+    "successCheck": {
+      "urlNot": "/Login"
+    },
+    "call": {
+      "method": "POST",
+      "url": "/UserControl/Signin"
+    }
+  },
+  "storageReset": {
+    "indexedDB": [],
+    "localStorage": [
+      "openNotification",
+      "notificationSoundEnabled"
+    ],
+    "sessionStorage": [
+      "webpush_prompt_closed_temp"
+    ]
+  },
+  "schemaSources": [],
+  "dataSourceRules": [
+    {
+      "pattern": "useQuery\\(",
+      "verdict": "api",
+      "note": "query 套件掛載時自動抓資料"
+    },
+    {
+      "pattern": "useSelector\\(",
+      "requiresAlso": "dispatch\\(",
+      "verdictIfMissing": "ui",
+      "note": "Redux 且無掛載時 dispatch → 需真實 UI 進入"
+    }
+  ],
+  "navigation": {
+    "entry": "menu",
+    "evidence": "實測：登入 ALEN 後直接 browser_navigate /MOS/Pantry，先顯示 Loading，隨後被導回 /MOS/Order。原因 RouterMainPage.tsx RoutesPage 掛載時無條件 navigate('/Order')；permissions 僅有 MOSSwitchPlant，非權限問題"
+  },
+  "recording": {
+    "maxBodyKB": 64,
+    "bufferHours": 2,
+    "sessionGapMinutes": 20,
+    "unclaimedKeepDays": 7,
+    "unroutedKeepHours": 12
+  },
+  "execute": {
+    "maxConsecutiveFailures": 3
+  }
+}
