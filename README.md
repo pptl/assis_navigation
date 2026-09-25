@@ -1,10 +1,8 @@
 # nav-recorder
 
-AI 開發輔助導航工具：讓 Agent dev（Claude Code）在開發複雜網頁時，不必每一輪測試都重新摸索「要怎麼走到某個功能畫面」。
+nav-recorder 是一個 AI 開發輔助導航工具。讓 Agent dev（Claude Code）在開發複雜網頁時，不必每一輪測試都重新摸索「要怎麼走到某個功能畫面」。
 
-使用者在自己的 Chrome 裡確認需求時，extension 會在背景錄下 API 流量、導航與點擊。Agent dev 接手任務後，把這段錄製蒸餾成一份 **precondition recipe**。之後每次要測試，它照著 recipe 用 Playwright MCP 把瀏覽器準備到**目標畫面的上一站**，最後一跳再自己邊看邊點進去。
-
-完整設計理念見 [navigation-recorder-design.md](navigation-recorder-design.md)。
+使用者在本地啓用localhost使用 Chrome 確認需求時，extension 會在背景錄下 API 流量、導航與點擊。Agent dev 接手任務後，把這段錄製蒸餾成一份 **precondition recipe**。之後每次要測試，它照著 recipe 用 Playwright MCP 把瀏覽器準備到**目標畫面的上一站**，最後再自己邊看邊點進去。
 
 ---
 
